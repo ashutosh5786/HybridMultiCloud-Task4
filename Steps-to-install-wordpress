@@ -1,0 +1,18 @@
+yum install mariadb mariadb-server httpd php php-mysql php-gd -y
+systemctl start mariadb php httpd
+wget https://wordpress.org/wordpress-5.1.1.tar.gz
+
+
+sudo chown -R apache /var/www
+sudo chgrp -R apache /var/www
+sudo chmod 2775 /var/www
+find /var/www -type d -exec sudo chmod 2775 {} \;
+find /var/www -type f -exec sudo chmod 0664 {} \;
+systemctl restart httpd
+
+
+CREATE USER 'test'@'localhost' IDENTIFIED BY '123';
+GRANT ALL PRIVILEGES ON *.* TO "test"@"localhost";
+FLUSH PRIVILEGES;
+
+## JUST FIGURE IT OUT BY YOURSELF 
