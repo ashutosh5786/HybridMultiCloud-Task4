@@ -7,9 +7,9 @@ provider "aws" {
 // Creating The VPC 
 
 resource "aws_vpc" "vpc" {
-  cidr_block = "172.31.0.0/16"
+  cidr_block       = "172.31.0.0/16"
   instance_tenancy = "default"
-  
+
   tags = {
     Name = "Tasks_vpc"
   }
@@ -19,11 +19,11 @@ resource "aws_vpc" "vpc" {
 // Creating the Public Subnet
 
 resource "aws_subnet" "Public_subnet" {
-  vpc_id     = aws_vpc.vpc.id
-  cidr_block = "172.31.32.0/20"
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = "172.31.32.0/20"
   map_public_ip_on_launch = true
-  availability_zone = "ap-south-1a"
-  
+  availability_zone       = "ap-south-1a"
+
 
   tags = {
     Name = "Tasks_Public_subnet"
@@ -34,11 +34,11 @@ resource "aws_subnet" "Public_subnet" {
 // Creating the Private Subnet
 
 resource "aws_subnet" "Private_subnet" {
-  vpc_id     = aws_vpc.vpc.id
-  cidr_block = "172.31.0.0/20"
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = "172.31.0.0/20"
   map_public_ip_on_launch = false
-  availability_zone = "ap-south-1a"
-  
+  availability_zone       = "ap-south-1a"
+
 
   tags = {
     Name = "Tasks_Private_subnet"
@@ -63,8 +63,8 @@ resource "aws_internet_gateway" "gw" {
 // Creating the Elastic IP Address
 
 resource "aws_eip" "EIP" {
-  vpc      = true
-  depends_on = [aws_internet_gateway.gw,] 
+  vpc        = true
+  depends_on = [aws_internet_gateway.gw, ]
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,7 +73,7 @@ resource "aws_eip" "EIP" {
 resource "aws_nat_gateway" "NGW" {
   depends_on = [
     aws_internet_gateway.gw,
-    ]
+  ]
   allocation_id = aws_eip.EIP.id
   subnet_id     = aws_subnet.Public_subnet.id
 
@@ -89,9 +89,9 @@ resource "aws_route_table" "rtable" {
 
   depends_on = [
     aws_internet_gateway.gw
-    
+
   ]
-  
+
   vpc_id = aws_vpc.vpc.id
   route {
     gateway_id = aws_internet_gateway.gw.id
@@ -122,7 +122,7 @@ resource "aws_route_table" "rptable" {
   depends_on = [
     aws_nat_gateway.NGW,
   ]
-  
+
   vpc_id = aws_vpc.vpc.id
   route {
     gateway_id = aws_nat_gateway.NGW.id
@@ -151,9 +151,9 @@ resource "aws_route_table_association" "Private_subnet_RTable" {
 
 resource "aws_security_group" "Wordpress-sec" {
 
-    depends_on = [
-        aws_vpc.vpc
-    ]
+  depends_on = [
+    aws_vpc.vpc
+  ]
   name        = "Allowing SSH and HTTP and MySQL port"
   description = "Allow ssh & http connections"
   vpc_id      = aws_vpc.vpc.id
@@ -190,28 +190,28 @@ resource "aws_security_group" "Wordpress-sec" {
 
 resource "aws_security_group" "MySQL-sec" {
 
-    depends_on = [
-        aws_vpc.vpc
-    ]
+  depends_on = [
+    aws_vpc.vpc
+  ]
   name        = "MySQL_Security_Group"
   description = "Allow 3306 Port connections"
   vpc_id      = aws_vpc.vpc.id
- 
+
   ingress {
-    description = "Allow Wordpress"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = [aws_subnet.Public_subnet.cidr_block]
+    description     = "Allow Wordpress"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    cidr_blocks     = [aws_subnet.Public_subnet.cidr_block]
     security_groups = [aws_security_group.Wordpress-sec.id]
   }
 
   ingress {
-    description = "Allowing Connection for SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [aws_subnet.Public_subnet.cidr_block]
+    description     = "Allowing Connection for SSH"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    cidr_blocks     = [aws_subnet.Public_subnet.cidr_block]
     security_groups = [aws_security_group.Wordpress-sec.id]
   }
 
@@ -231,98 +231,98 @@ resource "aws_security_group" "MySQL-sec" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //Creating The Key and Saving them on The Disk
 
-resource "tls_private_key" "mykey"{
-	algorithm = "RSA"
+resource "tls_private_key" "mykey" {
+  algorithm = "RSA"
 }
 
 resource "aws_key_pair" "key1" {
   key_name   = "key3"
   public_key = tls_private_key.mykey.public_key_openssh
 }
- 
-resource "local_file" "key_pair_save"{
-   content = tls_private_key.mykey.private_key_pem
-   filename = "key.pem"
+
+resource "local_file" "key_pair_save" {
+  content  = tls_private_key.mykey.private_key_pem
+  filename = "key.pem"
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Launching the Instance Of Wordpress
 
-    resource "aws_instance" "WordPress" {
+resource "aws_instance" "WordPress" {
 
-        depends_on = [
-            tls_private_key.mykey,
-            aws_key_pair.key1,
-            local_file.key_pair_save,
-            aws_security_group.Wordpress-sec,
-            aws_vpc.vpc,
-            aws_instance.MySQL
-        ]
-        ami = "ami-0ec00d0dbf5b00645"
-        instance_type = "t2.micro"
-        key_name = "key3"
-        availability_zone = "ap-south-1a"
-        subnet_id = aws_subnet.Public_subnet.id
-        vpc_security_group_ids  = [aws_security_group.Wordpress-sec.id]
-        tags = {
-        Name = "Wordpress"
-              }
-    }
+  depends_on = [
+    tls_private_key.mykey,
+    aws_key_pair.key1,
+    local_file.key_pair_save,
+    aws_security_group.Wordpress-sec,
+    aws_vpc.vpc,
+    aws_instance.MySQL
+  ]
+  ami                    = "ami-01764d35345d2213d"
+  instance_type          = "t2.micro"
+  key_name               = "key3"
+  availability_zone      = "ap-south-1a"
+  subnet_id              = aws_subnet.Public_subnet.id
+  vpc_security_group_ids = [aws_security_group.Wordpress-sec.id]
+  tags = {
+    Name = "Wordpress"
+  }
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Resource Group
-  resource "null_resource" "null1"{
-      depends_on = [
-        aws_instance.WordPress
-      ]
-    
-        connection {
-            type = "ssh"
-            user = "ubuntu"
-            private_key = tls_private_key.mykey.private_key_pem
-            host = aws_instance.WordPress.public_ip
-        }
+resource "null_resource" "null1" {
+  depends_on = [
+    aws_instance.WordPress
+  ]
 
-        provisioner "remote-exec" {
-            inline = [
-               "cd /var/www/wordpress/",
-               "sudo sed -i 's/hosyt/${aws_instance.MySQL.private_ip}/g' wp-config.php",
-            ]
-        
-        }
-    }
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    private_key = tls_private_key.mykey.private_key_pem
+    host        = aws_instance.WordPress.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "cd /var/www/html/",
+      "sudo sed -i 's/hosyt/${aws_instance.MySQL.private_ip}/g' wp-config.php",
+    ]
+
+  }
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Launching the Instance Of MySQL
 
-  resource "aws_instance" "MySQL"{
+resource "aws_instance" "MySQL" {
 
-    depends_on = [
-       tls_private_key.mykey,
-            aws_key_pair.key1,
-            local_file.key_pair_save,
-            aws_security_group.MySQL-sec,
-            aws_vpc.vpc
-    ]
-    ami = "ami-02f2f988defde3c2f"
-        instance_type = "t2.micro"
-        availability_zone = "ap-south-1a"
-        key_name = "key3"
-        subnet_id = aws_subnet.Private_subnet.id
-        vpc_security_group_ids  = [aws_security_group.MySQL-sec.id]
-        tags = {
-        Name = "Database-Server"
-              }
-
+  depends_on = [
+    tls_private_key.mykey,
+    aws_key_pair.key1,
+    local_file.key_pair_save,
+    aws_security_group.MySQL-sec,
+    aws_vpc.vpc
+  ]
+  ami                    = "ami-0c9a267c247a20e87"
+  instance_type          = "t2.micro"
+  availability_zone      = "ap-south-1a"
+  key_name               = "key3"
+  subnet_id              = aws_subnet.Private_subnet.id
+  vpc_security_group_ids = [aws_security_group.MySQL-sec.id]
+  tags = {
+    Name = "Database-Server"
   }
+
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 resource "null_resource" "null2" {
-  depends_on =  [
-           null_resource.null1,
+  depends_on = [
+    null_resource.null1,
   ]
- provisioner "local-exec" {
+  provisioner "local-exec" {
     command = "chmod 400 key.pem"
   }
 }
@@ -330,23 +330,23 @@ resource "null_resource" "null2" {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 resource "null_resource" "null3" {
- depends_on = [
-	null_resource.null2,
-]
+  depends_on = [
+    null_resource.null2,
+  ]
 
-provisioner "local-exec" {
-	command = "scp -i key.pem key.pem ubuntu@${aws_instance.WordPress.public_ip}:/home/ubuntu/key.pem"
-}
+  provisioner "local-exec" {
+    command = "scp -i key.pem key.pem ec2-user@${aws_instance.WordPress.public_ip}:/home/ec2-user/key.pem"
+  }
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 resource "null_resource" "null4" {
- depends_on = [
-	null_resource.null3
-]
+  depends_on = [
+    null_resource.null3
+  ]
 
-provisioner "local-exec"{
-	command = "firefox ${aws_instance.WordPress.public_ip}"
-}
+  provisioner "local-exec" {
+    command = "firefox ${aws_instance.WordPress.public_ip}"
+  }
 }
