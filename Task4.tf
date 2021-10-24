@@ -335,7 +335,7 @@ resource "null_resource" "null3" {
   ]
 
   provisioner "local-exec" {
-    command = "scp -i key.pem key.pem ec2-user@${aws_instance.WordPress.public_ip}:/home/ec2-user/key.pem"
+    command = "echo wait for confirmation"
   }
 }
 
